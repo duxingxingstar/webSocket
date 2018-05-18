@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>聊天室</title>
+    <script th:src="@{../sockjs.min.js}"></script>
+    <script th:src="@{../stomp.js}"></script>
+    <script th:src="@{../jquery-1.10.2.js}"></script>
+</head>
+<body>
+<p>聊天室</p>
+<form id="aricForm">
+    <textarea rows="4" cols="60" name="text"></textarea>
+    <input type="submit" />
+</form>
+<div id="output"></div>
+</body>
+<script type="text/javascript">
+    var stompClient = null;
+    $("#aricForm").submit(function(e){
+        e.preventDefault();
+        var text = $("#aricForm").find('textarea[name="text"]').val();
+        sendSpittle(text);
+    });
+
+    var sock = new SockJS("/endpointChat");//连接endpoint名为"endpointChat"的endpoint
+    stompClient = Stomp.over(sock);
+    // stomp.connect('guest','guest',function(frame){
+    //     //订阅/user/queue/notifications发送的消息,这里与在simpMessagingTemplate.convertAndSendToUser定义地址一致,/user是必须的
+    //     stomp.subscribe("/user/queue/notifications",handleNotification);
+    // });
+    stompClient.connect({},function(frame){//连接WebSocket服务端
+        //通过stompClient.subscribe订阅/topic/getResponse 目标(destination)发送的消息,这个是在控制器的@SentTo中定义的
+        stompClient.subscribe('/topic/weChat',function(response){
+            handleNotification(response.body);
+        });
+    });
+
+    function handleNotification(message){
+        $("#output").append("<b>Received: " + message + "</b><br/>");
+    }
+
+    function sendSpittle(text){
+        stompClient.send("/chat",{},text);
+    }
+
+    $("#stop").click(function(){
+        sock.close();
+    });
+</script>
+</html>
